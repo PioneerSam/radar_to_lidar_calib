@@ -21,7 +21,7 @@ def callback(lidar_msg, radar_msg):
     
 if __name__ == "__main__":
     rospy.init_node('radar_lidar_extract')
-    lidar_sub = message_filters.Subscriber('/velodyne_points', PointCloud2)
+    lidar_sub = message_filters.Subscriber('/lslidar128/points', PointCloud2)
     radar_sub = message_filters.Subscriber('/talker1/Navtech/Polar', Image)
     ts = message_filters.ApproximateTimeSynchronizer([lidar_sub, radar_sub], 100, 0.1)
     ts.registerCallback(callback)
