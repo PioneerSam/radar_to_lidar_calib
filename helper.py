@@ -251,7 +251,11 @@ def get_radar_scan_images_and_timestamps(path):
             cart_resolution = 0.275
 
             # convert the radar image to cartesian
-            radar_image = radar_polar_to_cartesian(polar_img,azimuths, resolution, cart_resolution, 512)
+            radar_image = radar_polar_to_cartesian(fft_data,azimuths, resolution, cart_resolution, 512)
+
+            # print("radar image",radar_image.shape)
+            # plt.imshow(radar_image,cmap='gray', vmin=0, vmax=255)
+            # plt.show()
 
             radar_images.append(radar_image)
 
@@ -418,7 +422,9 @@ def get_lidar_radar_pair(rosbag_path,radar_times,radar_fft_data,radar_azimuths,r
             np.savetxt('lidar_sam/{}.txt'.format(index), points, delimiter=',')
 
             index += 1
-            break
+
+            if index == 5:
+                break
 
         
     
