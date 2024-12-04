@@ -101,8 +101,17 @@ if __name__ == "__main__":
 
         targets = cen2018features(fft_data)
         polar = targets_to_polar_image(targets, fft_data.shape)
-        cart = radar_polar_to_cartesian(azimuths, polar, radar_resolution, cart_resolution, cart_pixel_width)
+        # cart = radar_polar_to_cartesian(azimuths, polar, radar_resolution, cart_resolution, cart_pixel_width)
+
+        # cv2.imshow("polar", polar)
+        # cv2.waitKey(0)
+
+        cart = radar_polar_to_cartesian_sam(polar, azimuths, radar_resolution, cart_resolution=0.275, cart_pixel_width=512, interpolate_crossover=False, fix_wobble=True) #TODO
         cart = np.where(cart > 0, 255, 0)
+
+        cart = cart.astype(np.uint8)
+        # cv2.imshow("cart", cart)
+        # cv2.waitKey(0)
 
         x = load_lidar(datadir + "/lidar/" + lidar_files[i])
         cart_lidar = lidar_to_cartesian_image(x, cart_pixel_width, cart_resolution)

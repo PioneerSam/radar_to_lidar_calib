@@ -50,6 +50,62 @@ def cen2018features(fft_data: np.ndarray, min_range=58, zq=4.0, sigma_gauss=17) 
 
     return np.asarray(peak_centers)
 
+# modified CACFAR algorithm
+def modifiedCACFAR(
+    raw_scan: np.ndarray,
+    minr=2.0,
+    maxr=60.0,
+    res=0.040308,
+    width=137,
+    guard=7,
+    threshold=0.50,
+    threshold2=0.0,
+    threshold3=0.23,
+    peak_summary_method='max_intensity'):
+    # peak_summary_method: median, geometric_mean, max_intensity, weighted_mean
+    rows = raw_scan.shape[0]
+    cols = raw_scan.shape[1]
+    if width % 2 == 0: width += 1
+    w2 = int(np.floor(width / 2))
+    mincol = int(minr / res + w2 + guard + 1)
+    if mincol > cols or mincol < 0: mincol = 0
+    maxcol = int(maxr / res - w2 - guard)
+    if maxcol > cols or maxcol < 0: maxcol = cols
+    N = maxcol - mincol
+    targets_polar_pixels = []
+    for i in range(rows):
+        mean = np.mean(raw_scan[i])
+        peak_points = []
+        peak_point_intensities = []
+        for j in range(mincol, maxcol):
+            left = 0
+            right = 0
+            for k in range(-w2 - guard, -guard):
+                left += raw_scan[i, j + k]
+            for k in range(guard + 1, w2 + guard):
+                right += raw_scan[i, j + k]
+            # (statistic) estimate of clutter power
+            stat = max(left, right) / w2  # GO-CFAR
+            thres = threshold * stat + threshold2 * mean + threshold3
+            if raw_scan[i, j] > thres:
+                peak_points.append(j)
+                peak_point_intensities.append(raw_scan[i, j])
+            elif len(peak_points) > 0:
+                if peak_summary_method == 'median':
+                    r = peak_points[len(peak_points) // 2]
+                elif peak_summary_method == 'geometric_mean':
+                    r = np.mean(peak_points)
+                elif peak_summary_method == 'max_intensity':
+                    r = peak_points[np.argmax(peak_point_intensities)]
+                elif peak_summary_method == 'weighted_mean':
+                    r = np.sum(np.array(peak_points) * np.array(peak_point_intensities) / np.sum(peak_point_intensities))
+                else:
+                    raise NotImplementedError("peak summary method: {} not supported".format(peak_summary_method))
+                targets_polar_pixels.append((i, r))
+                peak_points = []
+                peak_point_intensities = []
+    return np.asarray(targets_polar_pixels)
+
 def polar_to_cartesian_points(azimuths: np.ndarray, polar_points: np.ndarray, radar_resolution: float,
     downsample_rate=1) -> np.ndarray:
     """Converts points from polar coordinates to cartesian coordinates
