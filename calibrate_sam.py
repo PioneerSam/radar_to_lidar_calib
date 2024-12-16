@@ -58,21 +58,21 @@ def lidar_to_polar_image(pc, range_resolution, azimuth_resolution, range_bins, a
 
 if __name__ == "__main__":
     datadir = "."
-    radar_files = os.listdir(datadir + "/radar/")
-    lidar_files = os.listdir(datadir + "/lidar/")
+    radar_files = os.listdir(datadir + "/radar_sam/")
+    lidar_files = os.listdir(datadir + "/lidar_sam/")
     lidar_files.sort()
     radar_files.sort()
     if not os.path.exists("figs"):
         os.makedirs("figs")
     min_range = 2
-    radar_resolution = 0.040308
-    range_bins = 1712
+    radar_resolution = 0.04381 # Fomo radar res
+    range_bins = 6848
     azimuth_bins = 400
     cart_resolution = 0.2384
     cart_pixel_width = 838
     azimuth_step = np.pi / 200
     calibrate_translation = True
-    upsample_azimuths = 1
+    upsample_azimuths = 2
     cart_res2 = cart_resolution # (>= radar_resolution) decrease for better translation estimation
     cart_width2 = int(200 / cart_res2)
     if upsample_azimuths > 1.0:
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     for i in range(0, 1):
         print('Processing pair: {} {}'.format(radar_files[i], lidar_files[i]))
 
-        print("first radar file", datadir + "/radar/" + radar_files[i])
+        print("first radar file", datadir + "/radar_sam/" + radar_files[i])
 
         # i need the following stuff
         # timestamps, azimuths, valid, fft_data, radar_resolution
@@ -114,12 +114,13 @@ if __name__ == "__main__":
         # break
 
         # covert to radians azimuths
-        azimuths = azimuths/ 5595 * 2 * np.pi
+        azimuths = azimuths/5600 * 2 * np.pi
 
         if upsample_azimuths > 1.0:
             azimuths[1] = azimuth_step
             fft_data = cv2.resize(fft_data, dsize = (0, 0), fx = 1, fy = upsample_azimuths, interpolation = cv2.INTER_CUBIC)
 
+        targets = cen2018features(fft_data)
         targets = modifiedCACFAR(fft_data)
         polar = targets_to_polar_image(targets, fft_data.shape)
 
@@ -144,12 +145,15 @@ if __name__ == "__main__":
 
         print("cart shape: ", cart.shape)
 
-        # cv2.imshow("cart", cart)
-        # cv2.waitKey(0)
-
-
         x = load_lidar(datadir + "/lidar_sam/" + lidar_files[i])
+        print("x shape: ", x.shape)
         cart_lidar = lidar_to_cartesian_image(x, cart_pixel_width, cart_resolution)
+
+        print("cart_lidar shape: ", cart_lidar.shape)
+        # show cart_lidar image
+        # cv2.imshow("cart_lidar", cart_lidar)
+        # cv2.waitKey(0)
+        
         polar_lidar = lidar_to_polar_image(x, radar_resolution, azimuth_step, range_bins, azimuth_bins * upsample_azimuths)
 
         f1 = np.fft.fft2(polar)
@@ -202,20 +206,46 @@ if __name__ == "__main__":
     print('x: {} y : {}'.format(translation[0, 0], translation[0, 1]))
 
     if visualize_results:
+        print("------ I am in visualization ------")
         cart_resolution = 0.2384
         cart_pixel_width = 838 #512
         azimuth_step = np.pi / 200
         azimuth_bins = 400
         R = get_rotation(rotation)
         for i in range(0, 1):
-            _, azimuths, _, fft_data, _ = load_radar(datadir + "/radar/" + radar_files[i])
+            # _, azimuths, _, fft_data, _ = load_radar(datadir + "/radar/" + radar_files[i])
+            
+            fft_data = cv2.imread(datadir + "/radar_sam/" + radar_files[i], cv2.CV_32FC2)
+            azimuth_txt_path = datadir + "/radar_sam/" + str(i) + "_azimuths.txt"
+            timestamp_txt_path = datadir + "/radar_sam/" + str(i) + "_timesteps.txt"
+
+            # cv2.imshow("fft_data", fft_data)
+            # cv2.waitKey(0)
+
+            azimuths = np.loadtxt(azimuth_txt_path, delimiter=',').reshape(-1, 1)
+            timestamps = np.loadtxt(timestamp_txt_path, delimiter=',').reshape(-1, 1)
+
+            # covert to radians azimuths
+            azimuths = azimuths/5600 * 2 * np.pi
+
+
+            print("azimuths shape: ", azimuths.shape)
+            print("timestamps shape: ", timestamps.shape)
+            print("fft_data shape: ", fft_data.shape)
+
             targets = cen2018features(fft_data)
             polar = targets_to_polar_image(targets, fft_data.shape)
             # cart = radar_polar_to_cartesian_sam(azimuths, polar, radar_resolution, cart_resolution, cart_pixel_width)
             cart = radar_polar_to_cartesian_sam(polar, azimuths, radar_resolution, cart_resolution=cart_resolution, cart_pixel_width=cart_pixel_width, interpolate_crossover=False, fix_wobble=True)
 
             cart = np.where(cart > 0, 255, 0)
-            x = load_lidar(datadir + "/lidar/" + lidar_files[i])
+
+            # cart = cart.astype(np.uint8)
+            # cv2.imshow("cart", cart)
+            # cv2.waitKey(0)
+
+
+            x = load_lidar(datadir + "/lidar_sam/" + lidar_files[i])
             for j in range(0, x.shape[1]):
                 x[:,j] = np.squeeze(np.matmul(R, x[:,j].reshape(3,1)))
             cart_lidar = lidar_to_cartesian_image(x, cart_pixel_width, cart_resolution)

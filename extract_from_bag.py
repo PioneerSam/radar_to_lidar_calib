@@ -21,7 +21,7 @@ from helper import *
 # Extract Radar
 print("The current working directory is: ", os.getcwd())
 
-calibration_rosbag_path = "rosbags/sam_radar_lidar/"
+calibration_rosbag_path = "/home/samqiao/ASRL/vtr3_data/FOMO/nov22_2024/mcap_red"
 
 radar_fft_data, radar_azimuths, radar_timesteps, radar_times = get_radar_scan_images_and_timestamps(calibration_rosbag_path)
 

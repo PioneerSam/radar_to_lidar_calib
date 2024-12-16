@@ -3,3 +3,7 @@ radar/*.png
 *.pdf
 *.pyc
 lidar/*.txt
+
+*.txt
+*.png
+*.mcap

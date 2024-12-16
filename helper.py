@@ -245,9 +245,9 @@ def get_radar_scan_images_and_timestamps(path):
             # plt.show()
 
             # print("polar image",polar_img.shape)
-            azimuths = msg.encoder_values/5595*2*np.pi
+            azimuths = msg.encoder_values/5600*2*np.pi
             # print("azimuths",azimuths.shape)
-            resolution = 0.040308
+            resolution = 0.04381 # Fomo radar res
             cart_resolution = 0.275
 
             # convert the radar image to cartesian
@@ -264,7 +264,7 @@ def get_radar_scan_images_and_timestamps(path):
 
 
 
-def radar_polar_to_cartesian(fft_data, azimuths, radar_resolution, cart_resolution=0.2384, cart_pixel_width=640,
+def radar_polar_to_cartesian(fft_data, azimuths, radar_resolution, cart_resolution=0.275, cart_pixel_width=512,
                              interpolate_crossover=False, fix_wobble=True):
     # TAKEN FROM PYBOREAS
     """Convert a polar radar scan to cartesian.
@@ -368,7 +368,7 @@ def get_lidar_radar_pair(rosbag_path,radar_times,radar_fft_data,radar_azimuths,r
     global index
     index = 0
     with AnyReader([Path(rosbag_path)]) as reader:
-        connections = [x for x in reader.connections if x.topic == '/lslidar128/points']
+        connections = [x for x in reader.connections if x.topic == '/rslidar128/points']
         for connection, timestamp, rawdata in reader.messages(connections=connections):
             try:
                 msg = deserialize_cdr(rawdata, connection.msgtype)
@@ -418,7 +418,7 @@ def get_lidar_radar_pair(rosbag_path,radar_times,radar_fft_data,radar_azimuths,r
                 # print(x, y, z)
                 points = np.append(points, [x, y, z])
             points = points.reshape(-1, 3)
-            print("saving lidar points number",index)
+            # print("saving lidar points number",index)
             np.savetxt('lidar_sam/{}.txt'.format(index), points, delimiter=',')
 
             index += 1
